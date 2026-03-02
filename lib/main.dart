@@ -57,8 +57,8 @@ class MyCustomFormState extends State<MyCustomForm> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: ElevatedButton(
               onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  _formKey.currentState!.save();
+                if (_formKey.currentState?.validate() ?? false) {
+                  _formKey.currentState?.save();
                   setState(() {
                     _sum += int.parse(_enteredNumber);
                   });
