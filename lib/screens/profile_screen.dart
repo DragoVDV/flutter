@@ -1,14 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:lab_1/core/session.dart';
+import 'package:lab_1/core/validator.dart';
+import 'package:lab_1/models/user.dart';
 import 'package:lab_1/screens/login_screen.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
+import 'package:lab_1/widgets/app_text_field.dart';
 import 'package:lab_1/widgets/section_header.dart';
 import 'package:lab_1/widgets/stat_card.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   static const routeName = '/profile';
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late User _user = Session.instance.currentUser!;
+  late final _nameCtrl = TextEditingController(text: _user.name);
+  bool _editing = false;
+  String? _nameError;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final err = Validator.name(_nameCtrl.text);
+    setState(() => _nameError = err);
+    if (err != null) return;
+    final updated = _user.copyWith(name: _nameCtrl.text.trim());
+    await Session.instance.userRepo.update(updated);
+    Session.instance.currentUser = updated;
+    setState(() {
+      _user = updated;
+      _editing = false;
+    });
+  }
+
+  void _startEditing() => setState(() => _editing = true);
+
+  void _cancelEditing() {
+    _nameCtrl.text = _user.name;
+    setState(() {
+      _editing = false;
+      _nameError = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,66 +70,86 @@ class ProfileScreen extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(_editing ? Icons.close : Icons.edit_outlined),
+            color: AppColors.primary,
+            onPressed: _editing ? _cancelEditing : _startEditing,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: hPad),
-        child: const Column(
+        child: Column(
           children: [
-            SizedBox(height: 24),
-            CircleAvatar(
-              radius: 44,
-              backgroundColor: AppColors.primary,
-              child: Text(
-                'ВД',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+            const SizedBox(height: 24),
+            _avatar(),
+            const SizedBox(height: 16),
+            _nameField(),
+            const SizedBox(height: 4),
+            Text(
+              _user.email,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
               ),
             ),
-            SizedBox(height: 16),
-            _UserInfo(),
-            SizedBox(height: 32),
-            _StatsRow(),
-            SizedBox(height: 32),
-            Align(
+            if (_editing) ...[
+              const SizedBox(height: 16),
+              AppButton(label: 'Зберегти', onTap: _save),
+            ],
+            const SizedBox(height: 32),
+            const _StatsRow(),
+            const SizedBox(height: 32),
+            const Align(
               alignment: Alignment.centerLeft,
               child: SectionHeader(title: 'Налаштування'),
             ),
-            SizedBox(height: 12),
-            _SettingsList(),
-            SizedBox(height: 24),
-            _LogoutButton(),
-            SizedBox(height: 32),
+            const SizedBox(height: 12),
+            const _SettingsList(),
+            const SizedBox(height: 24),
+            const _LogoutButton(),
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
-}
 
-class _UserInfo extends StatelessWidget {
-  const _UserInfo();
+  Widget _avatar() {
+    final initials = _user.name.isNotEmpty
+        ? _user.name[0].toUpperCase()
+        : '?';
+    return CircleAvatar(
+      radius: 44,
+      backgroundColor: AppColors.primary,
+      child: Text(
+        initials,
+        style: const TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Text(
-          'Владислав Дацків',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          'volodadatskiv@gmail.com',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-      ],
+  Widget _nameField() {
+    if (_editing) {
+      return AppTextField(
+        hint: "Ваше ім'я",
+        label: "Ім'я",
+        icon: Icons.person_outline,
+        controller: _nameCtrl,
+        errorText: _nameError,
+      );
+    }
+    return Text(
+      _user.name,
+      style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+      ),
     );
   }
 }
