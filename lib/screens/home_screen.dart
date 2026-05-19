@@ -1,33 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:lab_1/core/session.dart';
+import 'package:lab_1/models/medication.dart';
 import 'package:lab_1/screens/profile_screen.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/box_slot.dart';
+import 'package:lab_1/widgets/med_dialog.dart';
 import 'package:lab_1/widgets/pill_card.dart';
 import 'package:lab_1/widgets/section_header.dart';
 
-class HomeScreen extends StatelessWidget {
+enum _MedAction { edit, delete }
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   static const routeName = '/home';
 
-  static const _pills = [
-    (name: 'Аспірин', time: '08:00', status: PillStatus.taken),
-    (name: 'Вітамін D', time: '12:00', status: PillStatus.pending),
-    (name: 'Омега-3', time: '18:00', status: PillStatus.pending),
-    (name: 'Магній', time: '21:00', status: PillStatus.missed),
-  ];
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
   static const _days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
-  static const _slots = [
-    PillStatus.taken,
-    PillStatus.taken,
-    PillStatus.taken,
-    PillStatus.pending,
-    PillStatus.pending,
-    PillStatus.pending,
-    PillStatus.pending,
-  ];
+  List<Medication> _meds = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMeds();
+  }
+
+  Future<void> _loadMeds() async {
+    final email = Session.instance.currentUser!.email;
+    final meds = await Session.instance.medRepo.getAll(email);
+    if (!mounted) return;
+    setState(() {
+      _meds = meds;
+      _loading = false;
+    });
+  }
+
+  List<PillStatus> get _boxSlots => List.generate(
+    7,
+    (i) =>
+        i < _meds.length ? _meds[i].status : PillStatus.pending,
+  );
+
+  Future<void> _showAddDialog() async {
+    final med = await showDialog<Medication>(
+      context: context,
+      builder: (_) => const MedDialog(),
+    );
+    if (med == null) return;
+    final email = Session.instance.currentUser!.email;
+    await Session.instance.medRepo.save(med, email);
+    await _loadMeds();
+  }
+
+  Future<void> _showEditDialog(Medication med) async {
+    final updated = await showDialog<Medication>(
+      context: context,
+      builder: (_) => MedDialog(initial: med),
+    );
+    if (updated == null) return;
+    final email = Session.instance.currentUser!.email;
+    await Session.instance.medRepo.update(updated, email);
+    await _loadMeds();
+  }
+
+  Future<void> _deleteMed(String id) async {
+    final email = Session.instance.currentUser!.email;
+    await Session.instance.medRepo.delete(id, email);
+    await _loadMeds();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,41 +81,69 @@ class HomeScreen extends StatelessWidget {
     final hPad = width > 600 ? width * 0.1 : 20.0;
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          _appBar(context, hPad),
-          SliverPadding(
-            padding: EdgeInsets.symmetric(
-              horizontal: hPad,
-              vertical: 16,
-            ),
-            sliver: SliverList.list(
-              children: [
-                const SectionHeader(title: 'Медичний бокс'),
-                const SizedBox(height: 12),
-                const _BoxGrid(days: _days, slots: _slots),
-                const SizedBox(height: 24),
-                const SectionHeader(title: 'Сьогодні'),
-                const SizedBox(height: 12),
-                ..._pills.map(
-                  (p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: PillCard(
-                      name: p.name,
-                      time: p.time,
-                      status: p.status,
-                    ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDialog,
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : CustomScrollView(
+              slivers: [
+                _appBar(context, hPad),
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: hPad,
+                    vertical: 16,
+                  ),
+                  sliver: SliverList.list(
+                    children: [
+                      const SectionHeader(title: 'Медичний бокс'),
+                      const SizedBox(height: 12),
+                      _BoxGrid(
+                        days: _days,
+                        slots: _boxSlots,
+                      ),
+                      const SizedBox(height: 24),
+                      const SectionHeader(title: 'Сьогодні'),
+                      const SizedBox(height: 12),
+                      if (_meds.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Center(
+                            child: Text(
+                              'Натисніть + щоб додати ліки',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._meds.map(
+                          (m) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: PillCard(
+                              name: m.name,
+                              time: m.time,
+                              status: m.status,
+                              trailing: _MedMenu(
+                                onEdit: () => _showEditDialog(m),
+                                onDelete: () => _deleteMed(m.id),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
   SliverAppBar _appBar(BuildContext context, double hPad) {
+    final name = Session.instance.currentUser?.name ?? '';
     return SliverAppBar(
       backgroundColor: AppColors.surface,
       floating: true,
@@ -79,14 +153,14 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Доброго ранку!',
+            'Привіт, $name!',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.primary,
             ),
           ),
           const Text(
-            'Понеділок, 19 травня',
+            'Перевірте свої ліки',
             style: TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
@@ -98,21 +172,56 @@ class HomeScreen extends StatelessWidget {
         Padding(
           padding: EdgeInsets.only(right: hPad),
           child: GestureDetector(
-            onTap: () => Navigator.pushNamed(
-              context,
-              ProfileScreen.routeName,
-            ),
-            child: const CircleAvatar(
+            onTap: () async {
+              await Navigator.pushNamed(
+                context,
+                ProfileScreen.routeName,
+              );
+              if (mounted) setState(() {});
+            },
+            child: CircleAvatar(
               backgroundColor: AppColors.primary,
               radius: 18,
               child: Text(
-                'В',
-                style: TextStyle(color: Colors.white),
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MedMenu extends StatelessWidget {
+  const _MedMenu({required this.onEdit, required this.onDelete});
+
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_MedAction>(
+      icon: const Icon(
+        Icons.more_vert,
+        color: AppColors.textSecondary,
+        size: 20,
+      ),
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: _MedAction.edit,
+          child: Text('Редагувати'),
+        ),
+        PopupMenuItem(
+          value: _MedAction.delete,
+          child: Text('Видалити'),
+        ),
+      ],
+      onSelected: (action) => switch (action) {
+        _MedAction.edit => onEdit(),
+        _MedAction.delete => onDelete(),
+      },
     );
   }
 }

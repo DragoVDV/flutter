@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:lab_1/models/medication.dart';
 import 'package:lab_1/theme/app_colors.dart';
-
-enum PillStatus { taken, pending, missed }
 
 class PillCard extends StatelessWidget {
   const PillCard({
     required this.name,
     required this.time,
     required this.status,
+    this.trailing,
     super.key,
   });
 
   final String name;
   final String time;
   final PillStatus status;
+  final Widget? trailing;
 
   Color get _color => switch (status) {
     PillStatus.taken => AppColors.taken,
@@ -75,11 +76,12 @@ class PillCard extends StatelessWidget {
                 ],
               ),
             ),
-            _StatusBadge(
-              icon: _icon,
-              label: _label,
-              color: _color,
-            ),
+            trailing ??
+                _StatusBadge(
+                  icon: _icon,
+                  label: _label,
+                  color: _color,
+                ),
           ],
         ),
       ),

@@ -1,14 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:lab_1/core/session.dart';
+import 'package:lab_1/core/validator.dart';
 import 'package:lab_1/screens/home_screen.dart';
 import 'package:lab_1/screens/register_screen.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   static const routeName = '/login';
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  late final _emailCtrl = TextEditingController();
+  late final _passCtrl = TextEditingController();
+  String? _emailError;
+  String? _passError;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final emailErr = Validator.email(_emailCtrl.text);
+    final passErr = Validator.password(_passCtrl.text);
+    setState(() {
+      _emailError = emailErr;
+      _passError = passErr;
+    });
+    if (emailErr != null || passErr != null) return;
+
+    setState(() => _loading = true);
+    final user = await Session.instance.userRepo.findByEmail(
+      _emailCtrl.text.trim(),
+    );
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (user == null || user.password != _passCtrl.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Невірний email або пароль'),
+        ),
+      );
+      return;
+    }
+    Session.instance.currentUser = user;
+    Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,26 +76,27 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 48),
               _header(context),
               const SizedBox(height: 40),
-              const AppTextField(
+              AppTextField(
                 hint: 'you@example.com',
                 label: 'Email',
                 icon: Icons.email_outlined,
+                controller: _emailCtrl,
+                errorText: _emailError,
               ),
               const SizedBox(height: 16),
-              const AppTextField(
+              AppTextField(
                 hint: '••••••••',
                 label: 'Пароль',
                 icon: Icons.lock_outlined,
                 obscure: true,
+                controller: _passCtrl,
+                errorText: _passError,
               ),
               const SizedBox(height: 24),
-              AppButton(
-                label: 'Увійти',
-                onTap: () => Navigator.pushReplacementNamed(
-                  context,
-                  HomeScreen.routeName,
-                ),
-              ),
+              if (_loading)
+                const Center(child: CircularProgressIndicator())
+              else
+                AppButton(label: 'Увійти', onTap: _submit),
               const SizedBox(height: 12),
               _registerRow(context),
             ],

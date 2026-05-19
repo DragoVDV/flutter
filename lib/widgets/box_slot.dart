@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lab_1/models/medication.dart';
 import 'package:lab_1/theme/app_colors.dart';
-import 'package:lab_1/widgets/pill_card.dart';
 
 class BoxSlot extends StatelessWidget {
   const BoxSlot({

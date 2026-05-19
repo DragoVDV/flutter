@@ -7,6 +7,8 @@ class AppTextField extends StatelessWidget {
     this.label,
     this.obscure = false,
     this.icon,
+    this.controller,
+    this.errorText,
     super.key,
   });
 
@@ -14,6 +16,8 @@ class AppTextField extends StatelessWidget {
   final String? label;
   final bool obscure;
   final IconData? icon;
+  final TextEditingController? controller;
+  final String? errorText;
 
   static final _radius = BorderRadius.circular(8);
 
@@ -21,9 +25,11 @@ class AppTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       obscureText: obscure,
+      controller: controller,
       decoration: InputDecoration(
         hintText: hint,
         labelText: label,
+        errorText: errorText,
         prefixIcon: icon != null ? Icon(icon) : null,
         filled: true,
         fillColor: AppColors.surface,
@@ -39,6 +45,17 @@ class AppTextField extends StatelessWidget {
           borderRadius: _radius,
           borderSide: const BorderSide(
             color: AppColors.accent,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: _radius,
+          borderSide: const BorderSide(color: AppColors.missed),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: _radius,
+          borderSide: const BorderSide(
+            color: AppColors.missed,
             width: 2,
           ),
         ),

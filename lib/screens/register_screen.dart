@@ -1,12 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:lab_1/core/session.dart';
+import 'package:lab_1/core/validator.dart';
+import 'package:lab_1/models/user.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   static const routeName = '/register';
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  late final _nameCtrl = TextEditingController();
+  late final _emailCtrl = TextEditingController();
+  late final _passCtrl = TextEditingController();
+  late final _confirmCtrl = TextEditingController();
+  String? _nameError;
+  String? _emailError;
+  String? _passError;
+  String? _confirmError;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final nameErr = Validator.name(_nameCtrl.text);
+    final emailErr = Validator.email(_emailCtrl.text);
+    final passErr = Validator.password(_passCtrl.text);
+    final confirmErr = Validator.confirmPassword(
+      _passCtrl.text,
+      _confirmCtrl.text,
+    );
+    setState(() {
+      _nameError = nameErr;
+      _emailError = emailErr;
+      _passError = passErr;
+      _confirmError = confirmErr;
+    });
+    if (nameErr != null ||
+        emailErr != null ||
+        passErr != null ||
+        confirmErr != null) {
+      return;
+    }
+
+    setState(() => _loading = true);
+    final existing = await Session.instance.userRepo.findByEmail(
+      _emailCtrl.text.trim(),
+    );
+    if (!mounted) return;
+
+    if (existing != null) {
+      setState(() {
+        _loading = false;
+        _emailError = 'Email вже використовується';
+      });
+      return;
+    }
+
+    await Session.instance.userRepo.save(
+      User(
+        name: _nameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _loading = false);
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,36 +104,47 @@ class RegisterScreen extends StatelessWidget {
             children: [
               _title(context),
               const SizedBox(height: 32),
-              const AppTextField(
+              AppTextField(
                 hint: "Ваше ім'я",
                 label: "Ім'я",
                 icon: Icons.person_outline,
+                controller: _nameCtrl,
+                errorText: _nameError,
               ),
               const SizedBox(height: 16),
-              const AppTextField(
+              AppTextField(
                 hint: 'you@example.com',
                 label: 'Email',
                 icon: Icons.email_outlined,
+                controller: _emailCtrl,
+                errorText: _emailError,
               ),
               const SizedBox(height: 16),
-              const AppTextField(
+              AppTextField(
                 hint: '••••••••',
                 label: 'Пароль',
                 icon: Icons.lock_outlined,
                 obscure: true,
+                controller: _passCtrl,
+                errorText: _passError,
               ),
               const SizedBox(height: 16),
-              const AppTextField(
+              AppTextField(
                 hint: '••••••••',
                 label: 'Підтвердіть пароль',
                 icon: Icons.lock_outlined,
                 obscure: true,
+                controller: _confirmCtrl,
+                errorText: _confirmError,
               ),
               const SizedBox(height: 24),
-              AppButton(
-                label: 'Зареєструватися',
-                onTap: () => Navigator.pop(context),
-              ),
+              if (_loading)
+                const Center(child: CircularProgressIndicator())
+              else
+                AppButton(
+                  label: 'Зареєструватися',
+                  onTap: _submit,
+                ),
               const SizedBox(height: 32),
             ],
           ),
