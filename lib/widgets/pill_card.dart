@@ -76,12 +76,7 @@ class PillCard extends StatelessWidget {
                 ],
               ),
             ),
-            trailing ??
-                _StatusBadge(
-                  icon: _icon,
-                  label: _label,
-                  color: _color,
-                ),
+            trailing ?? _StatusBadge(icon: _icon, label: _label, color: _color),
           ],
         ),
       ),

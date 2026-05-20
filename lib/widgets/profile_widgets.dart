@@ -57,9 +57,7 @@ class SettingsList extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        children: _items.map(_SettingItem.new).toList(),
-      ),
+      child: Column(children: _items.map(_SettingItem.new).toList()),
     );
   }
 }

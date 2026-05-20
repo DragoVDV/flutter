@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lab_1/core/validator.dart';
-import 'package:lab_1/providers/auth_provider.dart';
+import 'package:lab_1/cubits/auth/auth_cubit.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
 import 'package:lab_1/widgets/profile_widgets.dart';
 import 'package:lab_1/widgets/section_header.dart';
-import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,10 +19,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final _nameCtrl = TextEditingController(
-    text: context.read<AuthProvider>().user?.name ?? '',
+    text:
+        (context.read<AuthCubit>().state as AuthAuthenticated?)?.user.name ??
+        '',
   );
   bool _editing = false;
   String? _nameError;
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -33,15 +36,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final err = Validator.name(_nameCtrl.text);
     setState(() => _nameError = err);
     if (err != null) return;
-    context.read<AuthProvider>().updateName(_nameCtrl.text.trim());
+    context.read<AuthCubit>().updateName(_nameCtrl.text.trim());
     setState(() => _editing = false);
   }
 
   void _cancelEditing() {
-    _nameCtrl.text = context.read<AuthProvider>().user?.name ?? '';
-    _editing = false;
-    _nameError = null;
-    setState(() {});
+    final state = context.read<AuthCubit>().state;
+    _nameCtrl.text = state is AuthAuthenticated ? state.user.name : '';
+    setState(() {
+      _editing = false;
+      _nameError = null;
+    });
   }
 
   Future<void> _confirmLogout() async {
@@ -65,12 +70,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (confirmed != true || !mounted) return;
     Navigator.of(context).popUntil((r) => r.isFirst);
-    await context.read<AuthProvider>().logout();
+    await context.read<AuthCubit>().logout();
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
     final width = MediaQuery.sizeOf(context).width;
     final hPad = width > 600 ? width * 0.15 : 20.0;
     return Scaffold(
@@ -96,53 +100,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: hPad),
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            ProfileAvatar(name: user?.name ?? ''),
-            const SizedBox(height: 16),
-            if (_editing)
-              AppTextField(
-                hint: "Ваше ім'я",
-                label: "Ім'я",
-                icon: Icons.person_outline,
-                controller: _nameCtrl,
-                errorText: _nameError,
-              )
-            else
-              Text(
-                user?.name ?? '',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+      body: BlocBuilder<AuthCubit, AuthState>(
+        builder: (context, state) {
+          final user = state is AuthAuthenticated ? state.user : null;
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: hPad),
+            child: Column(
+              children: [
+                const SizedBox(height: 24),
+                ProfileAvatar(name: user?.name ?? ''),
+                const SizedBox(height: 16),
+                if (_editing)
+                  AppTextField(
+                    hint: "Ваше ім'я",
+                    label: "Ім'я",
+                    icon: Icons.person_outline,
+                    controller: _nameCtrl,
+                    errorText: _nameError,
+                  )
+                else
+                  Text(
+                    user?.name ?? '',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Text(
+                  user?.email ?? '',
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
-              ),
-            const SizedBox(height: 4),
-            Text(
-              user?.email ?? '',
-              style: const TextStyle(color: AppColors.textSecondary),
+                if (_editing) ...[
+                  const SizedBox(height: 16),
+                  AppButton(label: 'Зберегти', onTap: _save),
+                ],
+                const SizedBox(height: 32),
+                const ProfileStatsRow(),
+                const SizedBox(height: 32),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: SectionHeader(title: 'Налаштування'),
+                ),
+                const SizedBox(height: 12),
+                const SettingsList(),
+                const SizedBox(height: 24),
+                AppButton(
+                  label: 'Вийти',
+                  outlined: true,
+                  onTap: _confirmLogout,
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
-            if (_editing) ...[
-              const SizedBox(height: 16),
-              AppButton(label: 'Зберегти', onTap: _save),
-            ],
-            const SizedBox(height: 32),
-            const ProfileStatsRow(),
-            const SizedBox(height: 32),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: SectionHeader(title: 'Налаштування'),
-            ),
-            const SizedBox(height: 12),
-            const SettingsList(),
-            const SizedBox(height: 24),
-            AppButton(label: 'Вийти', outlined: true, onTap: _confirmLogout),
-            const SizedBox(height: 32),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/providers/connectivity_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lab_1/cubits/connectivity/connectivity_cubit.dart';
 import 'package:lab_1/theme/app_colors.dart';
-import 'package:provider/provider.dart';
 
 class ConnectivityBanner extends StatelessWidget {
   const ConnectivityBanner({required this.child, super.key});
@@ -10,7 +10,7 @@ class ConnectivityBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOnline = context.watch<ConnectivityProvider>().isOnline;
+    final isOnline = context.watch<ConnectivityCubit>().state;
     return Column(
       children: [
         if (!isOnline)
@@ -19,10 +19,7 @@ class ConnectivityBanner extends StatelessWidget {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     Icon(Icons.wifi_off, color: Colors.white, size: 16),
@@ -30,10 +27,7 @@ class ConnectivityBanner extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Немає підключення до інтернету',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 13),
                       ),
                     ),
                   ],

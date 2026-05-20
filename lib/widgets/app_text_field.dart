@@ -43,10 +43,7 @@ class AppTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: _radius,
-          borderSide: const BorderSide(
-            color: AppColors.accent,
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: AppColors.accent, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: _radius,
@@ -54,10 +51,7 @@ class AppTextField extends StatelessWidget {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: _radius,
-          borderSide: const BorderSide(
-            color: AppColors.missed,
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: AppColors.missed, width: 2),
         ),
       ),
     );

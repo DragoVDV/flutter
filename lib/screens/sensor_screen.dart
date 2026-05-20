@@ -1,78 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/providers/sensor_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lab_1/cubits/sensor/sensor_cubit.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/sensor_widgets.dart';
-import 'package:provider/provider.dart';
 
-class SensorScreen extends StatefulWidget {
+class SensorScreen extends StatelessWidget {
   const SensorScreen({super.key});
 
   static const routeName = '/sensor';
 
-  @override
-  State<SensorScreen> createState() => _SensorScreenState();
-}
-
-class _SensorScreenState extends State<SensorScreen> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<SensorProvider>().connect();
-  }
+  static String _fmt(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2, '0')}:'
+      '${dt.minute.toString().padLeft(2, '0')}:'
+      '${dt.second.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
-    final sensor = context.watch<SensorProvider>();
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return BlocProvider(
+      create: (_) => SensorCubit()..connect(),
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.primary),
-        title: const Text(
-          'Медбокс — стан пігулок',
-          style: TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w700,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: AppColors.primary),
+          title: const Text(
+            'Медбокс — стан пігулок',
+            style: TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            StatusChip(connected: sensor.isConnected),
-            const SizedBox(height: 8),
-            if (sensor.lastUpdate != null)
-              Text(
-                'Оновлено: ${_fmt(sensor.lastUpdate!)}',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
+        body: BlocBuilder<SensorCubit, SensorState>(
+          builder: (context, state) {
+            final connected = state is SensorConnected;
+            final slots = state is SensorConnected
+                ? state.slots
+                : <SlotState>[];
+            final lastUpdate = state is SensorConnected
+                ? state.lastUpdate
+                : null;
+            final error = state is SensorError ? state.message : null;
+
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  StatusChip(connected: connected),
+                  const SizedBox(height: 8),
+                  if (lastUpdate != null)
+                    Text(
+                      'Оновлено: ${_fmt(lastUpdate)}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  if (error != null) ErrorCard(message: error),
+                  if (slots.isEmpty && connected)
+                    const WaitingCard()
+                  else if (slots.isNotEmpty) ...[
+                    SummaryCard(
+                      present: (state as SensorConnected).pillsPresent,
+                      total: state.totalSlots,
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(child: SlotGrid(slots: slots)),
+                  ],
+                ],
               ),
-            const SizedBox(height: 20),
-            if (sensor.connectionError != null)
-              ErrorCard(message: sensor.connectionError!),
-            if (sensor.slots.isEmpty && sensor.isConnected)
-              const WaitingCard()
-            else if (sensor.slots.isNotEmpty) ...[
-              SummaryCard(
-                present: sensor.pillsPresent,
-                total: sensor.totalSlots,
-              ),
-              const SizedBox(height: 16),
-              Expanded(child: SlotGrid(slots: sensor.slots)),
-            ],
-          ],
+            );
+          },
         ),
       ),
     );
   }
-
-  String _fmt(DateTime dt) =>
-      '${dt.hour.toString().padLeft(2, '0')}:'
-      '${dt.minute.toString().padLeft(2, '0')}:'
-      '${dt.second.toString().padLeft(2, '0')}';
 }

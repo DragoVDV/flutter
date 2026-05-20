@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lab_1/core/validator.dart';
-import 'package:lab_1/providers/auth_provider.dart';
+import 'package:lab_1/cubits/auth/auth_cubit.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
-import 'package:provider/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -38,8 +38,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final nameErr = Validator.name(_nameCtrl.text);
     final emailErr = Validator.email(_emailCtrl.text);
     final passErr = Validator.password(_passCtrl.text);
-    final confirmErr =
-        Validator.confirmPassword(_passCtrl.text, _confirmCtrl.text);
+    final confirmErr = Validator.confirmPassword(
+      _passCtrl.text,
+      _confirmCtrl.text,
+    );
     setState(() {
       _nameError = nameErr;
       _emailError = emailErr;
@@ -48,26 +50,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
     if ([nameErr, emailErr, passErr, confirmErr].any((e) => e != null)) return;
 
-    final auth = context.read<AuthProvider>();
-    final ok = await auth.register(
+    await context.read<AuthCubit>().register(
       _nameCtrl.text.trim(),
       _emailCtrl.text.trim(),
       _passCtrl.text,
     );
+
     if (!mounted) return;
-    if (ok) return Navigator.popUntil(context, (r) => r.isFirst);
-    final msg = auth.errorMessage ?? 'Помилка реєстрації';
-    if (msg.contains('Email')) {
-      setState(() => _emailError = msg);
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
+    final state = context.read<AuthCubit>().state;
+    if (state is AuthAuthenticated) {
+      Navigator.popUntil(context, (r) => r.isFirst);
+    } else if (state is AuthError) {
+      if (state.message.contains('Email')) {
+        setState(() => _emailError = state.message);
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(state.message)));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final loading = context.watch<AuthProvider>().isLoading;
     final width = MediaQuery.sizeOf(context).width;
     final hPad = width > 600 ? width * 0.2 : 24.0;
     return Scaffold(
@@ -130,10 +135,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 errorText: _confirmError,
               ),
               const SizedBox(height: 24),
-              if (loading)
-                const Center(child: CircularProgressIndicator())
-              else
-                AppButton(label: 'Зареєструватися', onTap: _submit),
+              BlocBuilder<AuthCubit, AuthState>(
+                builder: (_, state) => state is AuthLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : AppButton(label: 'Зареєструватися', onTap: _submit),
+              ),
               const SizedBox(height: 32),
             ],
           ),

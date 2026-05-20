@@ -7,8 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LocalMedicationRepository implements MedicationRepository {
   static const _prefix = 'meds_';
 
-  Future<SharedPreferences> get _prefs =>
-      SharedPreferences.getInstance();
+  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
   @override
   Future<List<Medication>> getAll(String userEmail) async {
@@ -47,10 +46,7 @@ class LocalMedicationRepository implements MedicationRepository {
   Future<void> replaceAll(List<Medication> meds, String userEmail) =>
       _persist(meds, userEmail);
 
-  Future<void> _persist(
-    List<Medication> meds,
-    String userEmail,
-  ) async {
+  Future<void> _persist(List<Medication> meds, String userEmail) async {
     final prefs = await _prefs;
     await prefs.setString(
       '$_prefix$userEmail',

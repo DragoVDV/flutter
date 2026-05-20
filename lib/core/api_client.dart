@@ -87,13 +87,9 @@ abstract final class ApiClient {
     try {
       final parts = token.split('.');
       if (parts.length != 3) return null;
-      final padded = parts[1].padRight(
-        (parts[1].length + 3) & ~3,
-        '=',
-      );
-      return jsonDecode(
-        utf8.decode(base64Url.decode(padded)),
-      ) as Map<String, dynamic>;
+      final padded = parts[1].padRight((parts[1].length + 3) & ~3, '=');
+      return jsonDecode(utf8.decode(base64Url.decode(padded)))
+          as Map<String, dynamic>;
     } catch (_) {
       return null;
     }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/providers/sensor_provider.dart';
+import 'package:lab_1/cubits/sensor/sensor_cubit.dart';
 import 'package:lab_1/theme/app_colors.dart';
 
 class SlotCard extends StatelessWidget {
@@ -12,17 +12,16 @@ class SlotCard extends StatelessWidget {
     final hasPill = slot.hasPill;
     final bg = hasPill ? AppColors.taken.withAlpha(26) : AppColors.border;
     final iconColor = hasPill ? AppColors.taken : AppColors.textSecondary;
-    final icon =
-        hasPill ? Icons.medication_rounded : Icons.check_circle_outline;
+    final icon = hasPill
+        ? Icons.medication_rounded
+        : Icons.check_circle_outline;
     final label = hasPill ? slot.label : 'Прийнято';
 
     return Container(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: hasPill ? AppColors.taken : AppColors.border,
-        ),
+        border: Border.all(color: hasPill ? AppColors.taken : AppColors.border),
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -34,8 +33,7 @@ class SlotCard extends StatelessWidget {
             slot.label,
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color:
-                  hasPill ? AppColors.textPrimary : AppColors.textSecondary,
+              color: hasPill ? AppColors.textPrimary : AppColors.textSecondary,
             ),
           ),
           Text(label, style: TextStyle(fontSize: 11, color: iconColor)),

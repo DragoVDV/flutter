@@ -14,8 +14,9 @@ class MedDialog extends StatefulWidget {
 }
 
 class _MedDialogState extends State<MedDialog> {
-  late final _nameCtrl =
-      TextEditingController(text: widget.initial?.name ?? '');
+  late final _nameCtrl = TextEditingController(
+    text: widget.initial?.name ?? '',
+  );
   late PillStatus _status = widget.initial?.status ?? PillStatus.pending;
   late String? _time = widget.initial?.time;
   String? _nameError;
@@ -49,13 +50,13 @@ class _MedDialogState extends State<MedDialog> {
     setState(() => _nameError = err);
     if (err != null) return;
     if (_time == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Оберіть час прийому')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Оберіть час прийому')));
       return;
     }
-    final id = widget.initial?.id ??
-        DateTime.now().millisecondsSinceEpoch.toString();
+    final id =
+        widget.initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     Navigator.pop(
       context,
       Medication(
@@ -143,7 +144,9 @@ class _StatusSelector extends StatelessWidget {
       items: PillStatus.values
           .map((s) => DropdownMenuItem(value: s, child: Text(_label(s))))
           .toList(),
-      onChanged: (v) { if (v != null) onChanged(v); },
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
     );
   }
 }

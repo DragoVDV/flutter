@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/providers/auth_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lab_1/cubits/auth/auth_cubit.dart';
 import 'package:lab_1/screens/profile_screen.dart';
 import 'package:lab_1/screens/sensor_screen.dart';
 import 'package:lab_1/theme/app_colors.dart';
-import 'package:provider/provider.dart';
 
 class HomeAppBar extends StatelessWidget {
-  const HomeAppBar({
-    required this.hPad,
-    required this.onProfileReturn,
-    super.key,
-  });
+  const HomeAppBar({required this.hPad, super.key});
 
   final double hPad;
-  final VoidCallback onProfileReturn;
 
   @override
   Widget build(BuildContext context) {
-    final name = context.watch<AuthProvider>().user?.name ?? '';
+    final name = context.select<AuthCubit, String>(
+      (c) => c.state is AuthAuthenticated
+          ? (c.state as AuthAuthenticated).user.name
+          : '',
+    );
     return SliverAppBar(
       backgroundColor: AppColors.surface,
       floating: true,
@@ -43,16 +42,12 @@ class HomeAppBar extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.sensors, color: AppColors.primary),
           tooltip: 'Датчик медбоксу',
-          onPressed: () =>
-              Navigator.pushNamed(context, SensorScreen.routeName),
+          onPressed: () => Navigator.pushNamed(context, SensorScreen.routeName),
         ),
         Padding(
           padding: EdgeInsets.only(right: hPad),
           child: GestureDetector(
-            onTap: () async {
-              await Navigator.pushNamed(context, ProfileScreen.routeName);
-              onProfileReturn();
-            },
+            onTap: () => Navigator.pushNamed(context, ProfileScreen.routeName),
             child: CircleAvatar(
               backgroundColor: AppColors.primary,
               radius: 18,

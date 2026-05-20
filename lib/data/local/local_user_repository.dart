@@ -7,16 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LocalUserRepository implements UserRepository {
   static const _prefix = 'user_';
 
-  Future<SharedPreferences> get _prefs =>
-      SharedPreferences.getInstance();
+  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
   @override
   Future<void> save(User user) async {
     final prefs = await _prefs;
-    await prefs.setString(
-      '$_prefix${user.email}',
-      jsonEncode(user.toJson()),
-    );
+    await prefs.setString('$_prefix${user.email}', jsonEncode(user.toJson()));
   }
 
   @override
@@ -24,9 +20,7 @@ class LocalUserRepository implements UserRepository {
     final prefs = await _prefs;
     final raw = prefs.getString('$_prefix$email');
     if (raw == null) return null;
-    return User.fromJson(
-      jsonDecode(raw) as Map<String, dynamic>,
-    );
+    return User.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
   @override

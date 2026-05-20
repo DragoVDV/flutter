@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lab_1/core/validator.dart';
-import 'package:lab_1/providers/auth_provider.dart';
+import 'package:lab_1/cubits/auth/auth_cubit.dart';
 import 'package:lab_1/screens/register_screen.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
-import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,19 +38,22 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     if (emailErr != null || passErr != null) return;
 
-    final auth = context.read<AuthProvider>();
-    final ok = await auth.login(_emailCtrl.text.trim(), _passCtrl.text);
+    await context.read<AuthCubit>().login(
+      _emailCtrl.text.trim(),
+      _passCtrl.text,
+    );
+
     if (!mounted) return;
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.errorMessage ?? 'Помилка входу')),
-      );
+    final state = context.read<AuthCubit>().state;
+    if (state is AuthError) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(state.message)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final loading = context.watch<AuthProvider>().isLoading;
     final width = MediaQuery.sizeOf(context).width;
     final hPad = width > 600 ? width * 0.2 : 24.0;
     return Scaffold(
@@ -78,10 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 4),
               const Text(
                 'Відстежуйте свої ліки',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 15,
-                ),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
               ),
               const SizedBox(height: 40),
               AppTextField(
@@ -101,10 +101,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 errorText: _passError,
               ),
               const SizedBox(height: 24),
-              if (loading)
-                const Center(child: CircularProgressIndicator())
-              else
-                AppButton(label: 'Увійти', onTap: _submit),
+              BlocBuilder<AuthCubit, AuthState>(
+                builder: (_, state) => state is AuthLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : AppButton(label: 'Увійти', onTap: _submit),
+              ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -114,10 +115,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(
-                      context,
-                      RegisterScreen.routeName,
-                    ),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, RegisterScreen.routeName),
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
                       foregroundColor: AppColors.accent,

@@ -1,49 +1,26 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lab_1/cubits/sensor/sensor_state.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
-class SlotState {
-  const SlotState({
-    required this.id,
-    required this.label,
-    required this.hasPill,
-    required this.lastUpdated,
-  });
+export 'sensor_state.dart';
 
-  final int id;
-  final String label;
-  final bool hasPill;
-  final DateTime lastUpdated;
-}
+class SensorCubit extends Cubit<SensorState> {
+  SensorCubit() : super(const SensorDisconnected());
 
-class SensorProvider extends ChangeNotifier {
-  // Local Mosquitto — iOS simulator shares host network, so localhost works
   static const _broker = 'ws://localhost';
   static const _wsPort = 9001;
   static const _topic = 'medbox/sensor/pillbox';
 
   MqttServerClient? _client;
-  bool _connected = false;
-  List<SlotState> _slots = [];
-  DateTime? _lastUpdate;
-  String? _connectionError;
-
-  bool get isConnected => _connected;
-  List<SlotState> get slots => List.unmodifiable(_slots);
-  DateTime? get lastUpdate => _lastUpdate;
-  String? get connectionError => _connectionError;
-
-  int get pillsPresent => _slots.where((s) => s.hasPill).length;
-  int get totalSlots => _slots.length;
 
   Future<void> connect() async {
-    if (_connected) return;
+    if (state is SensorConnected || state is SensorConnecting) return;
+    emit(const SensorConnecting());
 
-    final clientId =
-        'medbox_flutter_${DateTime.now().millisecondsSinceEpoch}';
-
+    final clientId = 'medbox_flutter_${DateTime.now().millisecondsSinceEpoch}';
     _client = MqttServerClient(_broker, clientId)
       ..port = _wsPort
       ..useWebSocket = true
@@ -62,9 +39,8 @@ class SensorProvider extends ChangeNotifier {
     try {
       await _client!.connect();
     } catch (e) {
-      _connectionError = 'Помилка підключення: $e';
+      emit(SensorError('Помилка підключення: $e'));
       _client?.disconnect();
-      notifyListeners();
       return;
     }
 
@@ -72,28 +48,24 @@ class SensorProvider extends ChangeNotifier {
       _client!.subscribe(_topic, MqttQos.atLeastOnce);
       _client!.updates!.listen(_onMessage);
     } else {
-      _connectionError =
-          'Не вдалося підключитись (${_client!.connectionStatus?.state})';
-      notifyListeners();
+      emit(
+        SensorError(
+          'Не вдалося підключитись (${_client!.connectionStatus?.state})',
+        ),
+      );
     }
   }
 
   void disconnect() {
     _client?.disconnect();
     _client = null;
-    _connected = false;
+    emit(const SensorDisconnected());
   }
 
-  void _onConnected() {
-    _connected = true;
-    _connectionError = null;
-    notifyListeners();
-  }
+  void _onConnected() =>
+      emit(SensorConnected(slots: const [], lastUpdate: DateTime.now()));
 
-  void _onDisconnected() {
-    _connected = false;
-    notifyListeners();
-  }
+  void _onDisconnected() => emit(const SensorDisconnected());
 
   void _onMessage(List<MqttReceivedMessage<MqttMessage>> events) {
     final raw = events[0].payload as MqttPublishMessage;
@@ -103,8 +75,7 @@ class SensorProvider extends ChangeNotifier {
     try {
       final json = jsonDecode(payload) as Map<String, dynamic>;
       final now = DateTime.now();
-      final rawSlots = json['slots'] as List<dynamic>;
-      _slots = rawSlots.map((s) {
+      final slots = (json['slots'] as List<dynamic>).map((s) {
         final slot = s as Map<String, dynamic>;
         return SlotState(
           id: slot['id'] as int,
@@ -113,16 +84,13 @@ class SensorProvider extends ChangeNotifier {
           lastUpdated: now,
         );
       }).toList();
-      _lastUpdate = now;
-      notifyListeners();
-    } catch (_) {
-      // malformed message — ignore
-    }
+      emit(SensorConnected(slots: slots, lastUpdate: now));
+    } catch (_) {}
   }
 
   @override
-  void dispose() {
+  Future<void> close() {
     disconnect();
-    super.dispose();
+    return super.close();
   }
 }

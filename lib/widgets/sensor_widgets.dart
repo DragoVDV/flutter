@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/providers/sensor_provider.dart';
+import 'package:lab_1/cubits/sensor/sensor_cubit.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/slot_card.dart';
 
