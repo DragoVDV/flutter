@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/core/session.dart';
 import 'package:lab_1/core/validator.dart';
-import 'package:lab_1/models/user.dart';
+import 'package:lab_1/providers/auth_provider.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
+import 'package:provider/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -24,7 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _emailError;
   String? _passError;
   String? _confirmError;
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -56,34 +55,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    setState(() => _loading = true);
-    final existing = await Session.instance.userRepo.findByEmail(
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.register(
+      _nameCtrl.text.trim(),
       _emailCtrl.text.trim(),
+      _passCtrl.text,
     );
-    if (!mounted) return;
 
-    if (existing != null) {
-      setState(() {
-        _loading = false;
-        _emailError = 'Email вже використовується';
-      });
-      return;
+    if (!mounted) return;
+    if (ok) {
+      // Pop register screen; MedBoxApp rebuilds home: HomeScreen automatically
+      Navigator.popUntil(context, (r) => r.isFirst);
+    } else {
+      final msg = auth.errorMessage ?? 'Помилка реєстрації';
+      if (msg.contains('Email')) {
+        setState(() => _emailError = msg);
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      }
     }
-
-    await Session.instance.userRepo.save(
-      User(
-        name: _nameCtrl.text.trim(),
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text,
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    final loading = context.watch<AuthProvider>().isLoading;
     final width = MediaQuery.sizeOf(context).width;
     final hPad = width > 600 ? width * 0.2 : 24.0;
     return Scaffold(
@@ -95,10 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: hPad,
-            vertical: 8,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -138,13 +132,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 errorText: _confirmError,
               ),
               const SizedBox(height: 24),
-              if (_loading)
+              if (loading)
                 const Center(child: CircularProgressIndicator())
               else
-                AppButton(
-                  label: 'Зареєструватися',
-                  onTap: _submit,
-                ),
+                AppButton(label: 'Зареєструватися', onTap: _submit),
               const SizedBox(height: 32),
             ],
           ),
