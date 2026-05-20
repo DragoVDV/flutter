@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/core/session.dart';
 import 'package:lab_1/core/validator.dart';
-import 'package:lab_1/screens/home_screen.dart';
+import 'package:lab_1/providers/auth_provider.dart';
 import 'package:lab_1/screens/register_screen.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,7 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
   late final _passCtrl = TextEditingController();
   String? _emailError;
   String? _passError;
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -39,37 +38,31 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     if (emailErr != null || passErr != null) return;
 
-    setState(() => _loading = true);
-    final user = await Session.instance.userRepo.findByEmail(
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.login(
       _emailCtrl.text.trim(),
+      _passCtrl.text,
     );
-    if (!mounted) return;
-    setState(() => _loading = false);
 
-    if (user == null || user.password != _passCtrl.text) {
+    if (!mounted) return;
+    if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Невірний email або пароль'),
-        ),
+        SnackBar(content: Text(auth.errorMessage ?? 'Помилка входу')),
       );
-      return;
     }
-    Session.instance.currentUser = user;
-    Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+    // On success AuthProvider.status → authenticated → MedBoxApp rebuilds home:
   }
 
   @override
   Widget build(BuildContext context) {
+    final loading = context.watch<AuthProvider>().isLoading;
     final width = MediaQuery.sizeOf(context).width;
     final hPad = width > 600 ? width * 0.2 : 24.0;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: hPad,
-            vertical: 24,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -93,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 errorText: _passError,
               ),
               const SizedBox(height: 24),
-              if (_loading)
+              if (loading)
                 const Center(child: CircularProgressIndicator())
               else
                 AppButton(label: 'Увійти', onTap: _submit),
@@ -126,10 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 4),
         const Text(
           'Відстежуйте свої ліки',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 15,
-          ),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
         ),
       ],
     );
@@ -144,10 +134,8 @@ class _LoginScreenState extends State<LoginScreen> {
           style: TextStyle(color: AppColors.textSecondary),
         ),
         TextButton(
-          onPressed: () => Navigator.pushNamed(
-            context,
-            RegisterScreen.routeName,
-          ),
+          onPressed: () =>
+              Navigator.pushNamed(context, RegisterScreen.routeName),
           style: TextButton.styleFrom(
             padding: EdgeInsets.zero,
             foregroundColor: AppColors.accent,

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:lab_1/core/session.dart';
 import 'package:lab_1/core/validator.dart';
-import 'package:lab_1/models/user.dart';
-import 'package:lab_1/screens/login_screen.dart';
+import 'package:lab_1/providers/auth_provider.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
 import 'package:lab_1/widgets/section_header.dart';
 import 'package:lab_1/widgets/stat_card.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,8 +18,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late User _user = Session.instance.currentUser!;
-  late final _nameCtrl = TextEditingController(text: _user.name);
+  late final _nameCtrl = TextEditingController(
+    text: context.read<AuthProvider>().user?.name ?? '',
+  );
   bool _editing = false;
   String? _nameError;
 
@@ -30,31 +30,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  void _save() {
     final err = Validator.name(_nameCtrl.text);
     setState(() => _nameError = err);
     if (err != null) return;
-    final updated = _user.copyWith(name: _nameCtrl.text.trim());
-    await Session.instance.userRepo.update(updated);
-    Session.instance.currentUser = updated;
-    setState(() {
-      _user = updated;
-      _editing = false;
-    });
+    context.read<AuthProvider>().updateName(_nameCtrl.text.trim());
+    setState(() => _editing = false);
   }
 
   void _startEditing() => setState(() => _editing = true);
 
   void _cancelEditing() {
-    _nameCtrl.text = _user.name;
+    _nameCtrl.text = context.read<AuthProvider>().user?.name ?? '';
     setState(() {
       _editing = false;
       _nameError = null;
     });
   }
 
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Підтвердження виходу'),
+        content: const Text('Ви впевнені, що хочете вийти з акаунту?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Скасувати'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.missed,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Вийти'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      await context.read<AuthProvider>().logout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
     final width = MediaQuery.sizeOf(context).width;
     final hPad = width > 600 ? width * 0.15 : 20.0;
     return Scaffold(
@@ -83,15 +107,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             const SizedBox(height: 24),
-            _avatar(),
+            _avatar(user?.name ?? ''),
             const SizedBox(height: 16),
-            _nameField(),
+            _nameField(user?.name ?? ''),
             const SizedBox(height: 4),
             Text(
-              _user.email,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-              ),
+              user?.email ?? '',
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
             if (_editing) ...[
               const SizedBox(height: 16),
@@ -107,7 +129,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
             const _SettingsList(),
             const SizedBox(height: 24),
-            const _LogoutButton(),
+            AppButton(
+              label: 'Вийти',
+              outlined: true,
+              onTap: _confirmLogout,
+            ),
             const SizedBox(height: 32),
           ],
         ),
@@ -115,15 +141,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _avatar() {
-    final initials = _user.name.isNotEmpty
-        ? _user.name[0].toUpperCase()
-        : '?';
+  Widget _avatar(String name) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return CircleAvatar(
       radius: 44,
       backgroundColor: AppColors.primary,
       child: Text(
-        initials,
+        initial,
         style: const TextStyle(
           fontSize: 32,
           fontWeight: FontWeight.w700,
@@ -133,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _nameField() {
+  Widget _nameField(String name) {
     if (_editing) {
       return AppTextField(
         hint: "Ваше ім'я",
@@ -144,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
     return Text(
-      _user.name,
+      name,
       style: const TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w700,
@@ -224,41 +248,14 @@ class _SettingItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Icon(item.$1, color: AppColors.primary, size: 20),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              item.$2,
-              style: const TextStyle(fontSize: 15),
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right,
-            color: AppColors.textSecondary,
-          ),
+          Expanded(child: Text(item.$2, style: const TextStyle(fontSize: 15))),
+          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
         ],
-      ),
-    );
-  }
-}
-
-class _LogoutButton extends StatelessWidget {
-  const _LogoutButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return AppButton(
-      label: 'Вийти',
-      outlined: true,
-      onTap: () => Navigator.pushReplacementNamed(
-        context,
-        LoginScreen.routeName,
       ),
     );
   }
