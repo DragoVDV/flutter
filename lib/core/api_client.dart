@@ -9,7 +9,7 @@ class ApiException implements Exception {
 }
 
 abstract final class ApiClient {
-  static const _baseUrl = 'http://localhost:8000';
+  static const _baseUrl = 'http://192.168.10.102:8000';
 
   static Future<({String token, String name, String email})> login(
     String email,

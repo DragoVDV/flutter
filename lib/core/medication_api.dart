@@ -5,7 +5,7 @@ import 'package:lab_1/core/api_client.dart';
 import 'package:lab_1/models/medication.dart';
 
 abstract final class MedicationApi {
-  static const _baseUrl = 'http://localhost:8000';
+  static const _baseUrl = 'http://192.168.10.102:8000';
 
   static Future<List<Medication>> getMedications(String token) async {
     final res = await http

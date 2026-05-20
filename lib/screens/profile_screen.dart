@@ -5,6 +5,7 @@ import 'package:lab_1/cubits/auth/auth_cubit.dart';
 import 'package:lab_1/theme/app_colors.dart';
 import 'package:lab_1/widgets/app_button.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
+import 'package:lab_1/widgets/flashlight_avatar.dart';
 import 'package:lab_1/widgets/profile_widgets.dart';
 import 'package:lab_1/widgets/section_header.dart';
 
@@ -108,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 24),
-                ProfileAvatar(name: user?.name ?? ''),
+                FlashlightAvatar(name: user?.name ?? ''),
                 const SizedBox(height: 16),
                 if (_editing)
                   AppTextField(

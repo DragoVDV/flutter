@@ -10,7 +10,7 @@ export 'sensor_state.dart';
 class SensorCubit extends Cubit<SensorState> {
   SensorCubit() : super(const SensorDisconnected());
 
-  static const _broker = 'ws://localhost';
+  static const _broker = 'ws://192.168.10.102';
   static const _wsPort = 9001;
   static const _topic = 'medbox/sensor/pillbox';
 
