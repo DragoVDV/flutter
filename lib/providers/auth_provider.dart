@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:lab_1/core/api_client.dart';
@@ -19,7 +17,6 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _loading;
   String? get errorMessage => _errorMessage;
 
-  /// Called once before runApp — no notifyListeners needed.
   Future<void> tryAutoLogin() async {
     final token = await SecureStorage.readToken();
     if (token == null) {
@@ -32,16 +29,14 @@ class AuthProvider extends ChangeNotifier {
 
     if (isOnline) {
       try {
-        final user = await ApiClient.getMe(token);
-        _user = user;
+        _user = await ApiClient.getMe(token);
         _status = AuthStatus.authenticated;
       } catch (_) {
         await SecureStorage.deleteToken();
         _status = AuthStatus.unauthenticated;
       }
     } else {
-      // Offline — decode token locally to get user info
-      final claims = _decodeJwtClaims(token);
+      final claims = ApiClient.decodeJwtClaims(token);
       if (claims == null) {
         await SecureStorage.deleteToken();
         _status = AuthStatus.unauthenticated;
@@ -52,76 +47,31 @@ class AuthProvider extends ChangeNotifier {
         email: claims['sub'] as String? ?? '',
       );
       _status = AuthStatus.authenticated;
-      // ConnectivityProvider will show the offline banner automatically
     }
   }
 
   Future<bool> login(String email, String password) async {
-    _loading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    final results = await Connectivity().checkConnectivity();
-    if (results.every((r) => r == ConnectivityResult.none)) {
-      _loading = false;
-      _errorMessage = 'Немає підключення до інтернету';
-      notifyListeners();
-      return false;
-    }
-
+    if (!await _startRequest()) return false;
     try {
       final result = await ApiClient.login(email, password);
       await SecureStorage.saveToken(result.token);
-      _user = User(name: result.name, email: result.email);
-      _status = AuthStatus.authenticated;
-      _loading = false;
-      _errorMessage = null;
-      notifyListeners();
+      _handleAuthSuccess(result.name, result.email);
       return true;
-    } on ApiException catch (e) {
-      _errorMessage = e.message;
-      _loading = false;
-      notifyListeners();
-      return false;
-    } catch (_) {
-      _errorMessage = 'Помилка з\'єднання з сервером';
-      _loading = false;
-      notifyListeners();
+    } catch (e) {
+      _handleAuthError(e);
       return false;
     }
   }
 
   Future<bool> register(String name, String email, String password) async {
-    _loading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    final results = await Connectivity().checkConnectivity();
-    if (results.every((r) => r == ConnectivityResult.none)) {
-      _loading = false;
-      _errorMessage = 'Немає підключення до інтернету';
-      notifyListeners();
-      return false;
-    }
-
+    if (!await _startRequest()) return false;
     try {
       final result = await ApiClient.register(name, email, password);
       await SecureStorage.saveToken(result.token);
-      _user = User(name: result.name, email: result.email);
-      _status = AuthStatus.authenticated;
-      _loading = false;
-      _errorMessage = null;
-      notifyListeners();
+      _handleAuthSuccess(result.name, result.email);
       return true;
-    } on ApiException catch (e) {
-      _errorMessage = e.message;
-      _loading = false;
-      notifyListeners();
-      return false;
-    } catch (_) {
-      _errorMessage = 'Помилка з\'єднання з сервером';
-      _loading = false;
-      notifyListeners();
+    } catch (e) {
+      _handleAuthError(e);
       return false;
     }
   }
@@ -144,26 +94,32 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  static Map<String, dynamic>? _decodeJwtClaims(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
-      final padded = parts[1].padRight(
-        (parts[1].length + 3) & ~3,
-        '=',
-      );
-      final claims = jsonDecode(
-        utf8.decode(base64Url.decode(padded)),
-      ) as Map<String, dynamic>;
-      final exp = claims['exp'] as int?;
-      if (exp != null &&
-          DateTime.fromMillisecondsSinceEpoch(exp * 1000)
-              .isBefore(DateTime.now())) {
-        return null;
-      }
-      return claims;
-    } catch (_) {
-      return null;
+  Future<bool> _startRequest() async {
+    final results = await Connectivity().checkConnectivity();
+    if (results.every((r) => r == ConnectivityResult.none)) {
+      _loading = false;
+      _errorMessage = 'Немає підключення до інтернету';
+      notifyListeners();
+      return false;
     }
+    _loading = true;
+    _errorMessage = null;
+    notifyListeners();
+    return true;
+  }
+
+  void _handleAuthSuccess(String name, String email) {
+    _user = User(name: name, email: email);
+    _status = AuthStatus.authenticated;
+    _loading = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void _handleAuthError(Object e) {
+    _errorMessage =
+        e is ApiException ? e.message : 'Помилка з\'єднання з сервером';
+    _loading = false;
+    notifyListeners();
   }
 }

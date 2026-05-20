@@ -44,6 +44,9 @@ class LocalMedicationRepository implements MedicationRepository {
     await _persist(meds, userEmail);
   }
 
+  Future<void> replaceAll(List<Medication> meds, String userEmail) =>
+      _persist(meds, userEmail);
+
   Future<void> _persist(
     List<Medication> meds,
     String userEmail,

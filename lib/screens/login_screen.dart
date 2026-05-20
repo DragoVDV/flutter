@@ -39,18 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (emailErr != null || passErr != null) return;
 
     final auth = context.read<AuthProvider>();
-    final ok = await auth.login(
-      _emailCtrl.text.trim(),
-      _passCtrl.text,
-    );
-
+    final ok = await auth.login(_emailCtrl.text.trim(), _passCtrl.text);
     if (!mounted) return;
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.errorMessage ?? 'Помилка входу')),
       );
     }
-    // On success AuthProvider.status → authenticated → MedBoxApp rebuilds home:
   }
 
   @override
@@ -67,7 +62,27 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 48),
-              _header(context),
+              const Icon(
+                Icons.medical_services_rounded,
+                size: 48,
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'MedBox',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Відстежуйте свої ліки',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 40),
               AppTextField(
                 hint: 'you@example.com',
@@ -91,63 +106,35 @@ class _LoginScreenState extends State<LoginScreen> {
               else
                 AppButton(label: 'Увійти', onTap: _submit),
               const SizedBox(height: 12),
-              _registerRow(context),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Немає акаунту? ',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      RegisterScreen.routeName,
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      foregroundColor: AppColors.accent,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Зареєструватися',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _header(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(
-          Icons.medical_services_rounded,
-          size: 48,
-          color: AppColors.primary,
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'MedBox',
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Відстежуйте свої ліки',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
-        ),
-      ],
-    );
-  }
-
-  Widget _registerRow(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          'Немає акаунту? ',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        TextButton(
-          onPressed: () =>
-              Navigator.pushNamed(context, RegisterScreen.routeName),
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            foregroundColor: AppColors.accent,
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: const Text(
-            'Зареєструватися',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
     );
   }
 }

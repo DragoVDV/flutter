@@ -38,22 +38,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final nameErr = Validator.name(_nameCtrl.text);
     final emailErr = Validator.email(_emailCtrl.text);
     final passErr = Validator.password(_passCtrl.text);
-    final confirmErr = Validator.confirmPassword(
-      _passCtrl.text,
-      _confirmCtrl.text,
-    );
+    final confirmErr =
+        Validator.confirmPassword(_passCtrl.text, _confirmCtrl.text);
     setState(() {
       _nameError = nameErr;
       _emailError = emailErr;
       _passError = passErr;
       _confirmError = confirmErr;
     });
-    if (nameErr != null ||
-        emailErr != null ||
-        passErr != null ||
-        confirmErr != null) {
-      return;
-    }
+    if ([nameErr, emailErr, passErr, confirmErr].any((e) => e != null)) return;
 
     final auth = context.read<AuthProvider>();
     final ok = await auth.register(
@@ -61,20 +54,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _emailCtrl.text.trim(),
       _passCtrl.text,
     );
-
     if (!mounted) return;
-    if (ok) {
-      // Pop register screen; MedBoxApp rebuilds home: HomeScreen automatically
-      Navigator.popUntil(context, (r) => r.isFirst);
+    if (ok) return Navigator.popUntil(context, (r) => r.isFirst);
+    final msg = auth.errorMessage ?? 'Помилка реєстрації';
+    if (msg.contains('Email')) {
+      setState(() => _emailError = msg);
     } else {
-      final msg = auth.errorMessage ?? 'Помилка реєстрації';
-      if (msg.contains('Email')) {
-        setState(() => _emailError = msg);
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(msg)));
-      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -96,7 +83,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _title(context),
+              Text(
+                'Створити акаунт',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Заповніть форму для реєстрації',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 32),
               AppTextField(
                 hint: "Ваше ім'я",
@@ -141,26 +139,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _title(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Створити акаунт',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Заповніть форму для реєстрації',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-      ],
     );
   }
 }

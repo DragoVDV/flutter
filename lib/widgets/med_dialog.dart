@@ -4,8 +4,9 @@ import 'package:lab_1/models/medication.dart';
 import 'package:lab_1/widgets/app_text_field.dart';
 
 class MedDialog extends StatefulWidget {
-  const MedDialog({this.initial, super.key});
+  const MedDialog({required this.day, this.initial, super.key});
 
+  final int day;
   final Medication? initial;
 
   @override
@@ -13,11 +14,9 @@ class MedDialog extends StatefulWidget {
 }
 
 class _MedDialogState extends State<MedDialog> {
-  late final _nameCtrl = TextEditingController(
-    text: widget.initial?.name ?? '',
-  );
-  late PillStatus _status =
-      widget.initial?.status ?? PillStatus.pending;
+  late final _nameCtrl =
+      TextEditingController(text: widget.initial?.name ?? '');
+  late PillStatus _status = widget.initial?.status ?? PillStatus.pending;
   late String? _time = widget.initial?.time;
   String? _nameError;
 
@@ -28,7 +27,7 @@ class _MedDialogState extends State<MedDialog> {
   }
 
   Future<void> _pickTime() async {
-    TimeOfDay initial = TimeOfDay.now();
+    var initial = TimeOfDay.now();
     if (_time != null) {
       final parts = _time!.split(':');
       initial = TimeOfDay(
@@ -36,14 +35,13 @@ class _MedDialogState extends State<MedDialog> {
         minute: int.parse(parts[1]),
       );
     }
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-    );
+    final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked == null || !mounted) return;
-    final h = picked.hour.toString().padLeft(2, '0');
-    final m = picked.minute.toString().padLeft(2, '0');
-    setState(() => _time = '$h:$m');
+    setState(() {
+      _time =
+          '${picked.hour.toString().padLeft(2, '0')}:'
+          '${picked.minute.toString().padLeft(2, '0')}';
+    });
   }
 
   void _submit() {
@@ -65,6 +63,7 @@ class _MedDialogState extends State<MedDialog> {
         name: _nameCtrl.text.trim(),
         time: _time!,
         status: _status,
+        day: widget.day,
       ),
     );
   }
@@ -72,9 +71,7 @@ class _MedDialogState extends State<MedDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(
-        widget.initial == null ? 'Новий препарат' : 'Редагувати',
-      ),
+      title: Text(widget.initial == null ? 'Новий препарат' : 'Редагувати'),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -101,10 +98,7 @@ class _MedDialogState extends State<MedDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Скасувати'),
         ),
-        TextButton(
-          onPressed: _submit,
-          child: const Text('Зберегти'),
-        ),
+        TextButton(onPressed: _submit, child: const Text('Зберегти')),
       ],
     );
   }
@@ -117,23 +111,16 @@ class _TimeButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: const Icon(Icons.access_time_rounded),
-      label: Text(time ?? 'Оберіть час'),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: onTap,
+    icon: const Icon(Icons.access_time_rounded),
+    label: Text(time ?? 'Оберіть час'),
+    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+  );
 }
 
 class _StatusSelector extends StatelessWidget {
-  const _StatusSelector({
-    required this.status,
-    required this.onChanged,
-  });
+  const _StatusSelector({required this.status, required this.onChanged});
 
   final PillStatus status;
   final ValueChanged<PillStatus> onChanged;
@@ -151,22 +138,12 @@ class _StatusSelector extends StatelessWidget {
       decoration: const InputDecoration(
         labelText: 'Статус',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 14,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       ),
       items: PillStatus.values
-          .map(
-            (s) => DropdownMenuItem(
-              value: s,
-              child: Text(_label(s)),
-            ),
-          )
+          .map((s) => DropdownMenuItem(value: s, child: Text(_label(s))))
           .toList(),
-      onChanged: (v) {
-        if (v != null) onChanged(v);
-      },
+      onChanged: (v) { if (v != null) onChanged(v); },
     );
   }
 }

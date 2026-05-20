@@ -47,3 +47,17 @@ ios/Pods/
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Python / Backend
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.db
+backend/*.sqlite3
+**/__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+.env.*
+!.env.example

@@ -25,7 +25,7 @@ abstract final class ApiClient {
     _checkStatus(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final token = body['access_token'] as String;
-    final claims = _decodeJwtClaims(token);
+    final claims = decodeJwtClaims(token) ?? {};
     return (
       token: token,
       name: claims['name'] as String? ?? '',
@@ -52,7 +52,7 @@ abstract final class ApiClient {
     _checkStatus(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final token = body['access_token'] as String;
-    final claims = _decodeJwtClaims(token);
+    final claims = decodeJwtClaims(token) ?? {};
     return (
       token: token,
       name: claims['name'] as String? ?? name,
@@ -83,10 +83,10 @@ abstract final class ApiClient {
     throw ApiException(message);
   }
 
-  static Map<String, dynamic> _decodeJwtClaims(String token) {
+  static Map<String, dynamic>? decodeJwtClaims(String token) {
     try {
       final parts = token.split('.');
-      if (parts.length != 3) return {};
+      if (parts.length != 3) return null;
       final padded = parts[1].padRight(
         (parts[1].length + 3) & ~3,
         '=',
@@ -95,7 +95,7 @@ abstract final class ApiClient {
         utf8.decode(base64Url.decode(padded)),
       ) as Map<String, dynamic>;
     } catch (_) {
-      return {};
+      return null;
     }
   }
 }

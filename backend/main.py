@@ -1,11 +1,20 @@
+from typing import List
+
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 import auth as auth_utils
 from database import Base, engine, get_db
-from models import UserModel
-from schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from models import MedicationModel, UserModel
+from schemas import (
+    LoginRequest,
+    MedicationRequest,
+    MedicationResponse,
+    RegisterRequest,
+    TokenResponse,
+    UserResponse,
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -63,3 +72,64 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 @app.get("/auth/me", response_model=UserResponse)
 def me(current_user: UserModel = Depends(get_current_user)):
     return current_user
+
+
+@app.get("/medications", response_model=List[MedicationResponse])
+def get_medications(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(MedicationModel)
+        .filter(MedicationModel.user_email == current_user.email)
+        .all()
+    )
+
+
+@app.post("/medications", response_model=MedicationResponse, status_code=201)
+def add_medication(
+    body: MedicationRequest,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    med = MedicationModel(**body.model_dump(), user_email=current_user.email)
+    db.add(med)
+    db.commit()
+    db.refresh(med)
+    return med
+
+
+@app.put("/medications/{med_id}", response_model=MedicationResponse)
+def update_medication(
+    med_id: str,
+    body: MedicationRequest,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    med = db.query(MedicationModel).filter(
+        MedicationModel.id == med_id,
+        MedicationModel.user_email == current_user.email,
+    ).first()
+    if med is None:
+        raise HTTPException(status_code=404, detail="Ліки не знайдено")
+    for field, value in body.model_dump().items():
+        setattr(med, field, value)
+    db.commit()
+    db.refresh(med)
+    return med
+
+
+@app.delete("/medications/{med_id}", status_code=204)
+def delete_medication(
+    med_id: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    med = db.query(MedicationModel).filter(
+        MedicationModel.id == med_id,
+        MedicationModel.user_email == current_user.email,
+    ).first()
+    if med is None:
+        raise HTTPException(status_code=404, detail="Ліки не знайдено")
+    db.delete(med)
+    db.commit()

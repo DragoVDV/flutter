@@ -23,3 +23,21 @@ class UserResponse(BaseModel):
     email: str
 
     model_config = {"from_attributes": True}
+
+
+class MedicationRequest(BaseModel):
+    id: str
+    name: str
+    time: str
+    status: str
+    day: int = 0
+
+
+class MedicationResponse(BaseModel):
+    id: str
+    name: str
+    time: str
+    status: str
+    day: int = 0
+
+    model_config = {"from_attributes": True}
